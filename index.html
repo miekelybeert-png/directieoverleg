@@ -1,0 +1,2049 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Directieoverleg</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js" defer></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --teal:       #1F6B7A;
+  --teal-light: #E8F4F6;
+  --teal-mid:   #9ECDD5;
+  --amber:      #C47D1A;
+  --amber-light:#FEF3E2;
+  --green:      #2E7D32;
+  --green-light:#EBF5EB;
+  --blue:       #1565C0;
+  --blue-light: #E8F1FD;
+  --gray:       #6B7280;
+  --gray-light: #F3F4F6;
+  --gray-border:#E5E7EB;
+  --done-color: #9CA3AF;
+  --done-light: #F9FAFB;
+  --indigo:     #4F46E5;
+  --indigo-light:#EEF0FF;
+  --white:      #FFFFFF;
+  --text:       #111827;
+  --text-muted: #6B7280;
+  --radius:     10px;
+  --shadow:     0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #F5F4F0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ════════════════════════════════════════════════════════════════ */
+/* LOGIN SCHERM - Dit is het enige zichtbare element bij het laden */
+/* ════════════════════════════════════════════════════════════════ */
+#loginOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--teal) 0%, #0F4A54 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: opacity 0.3s ease-out;
+}
+
+#loginOverlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.login-box {
+  background: var(--white);
+  padding: 48px 40px;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  width: 100%;
+  max-width: 380px;
+}
+
+.login-box h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: var(--teal);
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+}
+
+.login-box .login-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 28px;
+}
+
+.login-field {
+  margin-bottom: 20px;
+}
+
+.login-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+
+.login-field input[type="password"] {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--gray-border);
+  border-radius: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--white);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+}
+
+.login-field input[type="password"]:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(31,107,122,0.1);
+}
+
+#loginError {
+  color: #DC2626;
+  font-size: 13px;
+  margin-bottom: 16px;
+  display: none;
+}
+
+#loginError.show {
+  display: block;
+}
+
+#loginBtn {
+  width: 100%;
+  padding: 12px;
+  background: var(--teal);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  letter-spacing: 0.02em;
+}
+
+#loginBtn:hover { background: #185f6d; }
+#loginBtn:active { transform: scale(0.98); }
+#loginBtn:disabled { background: var(--gray-light); color: var(--text-muted); cursor: not-allowed; }
+
+.login-loading {
+  display: none;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-top: 12px;
+}
+
+.login-loading.show {
+  display: block;
+}
+
+.login-loading::after {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  margin-left: 4px;
+  animation: dots 1.4s infinite;
+}
+
+@keyframes dots {
+  0%, 20% { opacity: 0.3; }
+  50% { opacity: 1; }
+  80%, 100% { opacity: 0.3; }
+}
+
+/* ════════════════════════════════════════════════════════════════ */
+/* HOOFD APPLICATIE - VERBORGEN TOT AUTHENTICATIE */
+/* ════════════════════════════════════════════════════════════════ */
+#appContainer {
+  display: none;
+}
+
+#appContainer.authenticated {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+/* ── Header ── */
+header {
+  background: var(--teal);
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+header h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: white;
+  letter-spacing: 0.02em;
+}
+
+.header-date {
+  font-size: 12px;
+  color: rgba(255,255,255,0.65);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ── Layout ── */
+.layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 0;
+  min-height: calc(100vh - 60px);
+}
+
+/* ── Sidebar (form) ── */
+.sidebar {
+  background: var(--white);
+  border-right: 1px solid var(--gray-border);
+  padding: 24px 20px;
+  position: sticky;
+  top: 60px;
+  height: calc(100vh - 60px);
+  overflow-y: auto;
+}
+
+.sidebar h2 {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.field {
+  margin-bottom: 12px;
+}
+
+.field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 5px;
+}
+
+.field input[type="text"],
+.field input[type="date"],
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--gray-border);
+  border-radius: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--white);
+  transition: border-color 0.15s;
+  outline: none;
+  appearance: none;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(31,107,122,0.1);
+}
+
+.field select[multiple] {
+  height: 88px;
+  padding: 4px;
+}
+
+.field select[multiple] option {
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.btn-add {
+  width: 100%;
+  padding: 10px;
+  background: var(--teal);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.15s, transform 0.1s;
+  letter-spacing: 0.02em;
+}
+
+.btn-add:hover { background: #185f6d; }
+.btn-add:active { transform: scale(0.98); }
+
+/* ── Main content ── */
+.main {
+  padding: 28px 32px;
+}
+
+/* ── Section ── */
+/* ── Fichebak-tabbladen ── */
+.tab-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 26px;
+  position: relative;
+  z-index: 1;
+}
+
+.tab-bar-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tab-fiche {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 230px;
+  padding: 13px 20px 14px;
+  border: 1px solid var(--gray-border);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  background: #ECEAE3;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  box-shadow: 0 -1px 3px rgba(0,0,0,0.04);
+  transition: background 0.15s, transform 0.12s, color 0.15s;
+  transform: translateY(4px);
+}
+
+.tab-fiche:hover {
+  background: #F3F1EA;
+  transform: translateY(2px);
+}
+
+.tab-fiche .tab-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tab-fiche .tab-sub {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  margin-top: 3px;
+  opacity: 0.85;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.tab-fiche .tab-tab {
+  position: absolute;
+  top: -7px;
+  left: 18px;
+  width: 42px;
+  height: 8px;
+  border-radius: 4px 4px 0 0;
+  background: var(--gray-border);
+}
+
+/* Actieve fiche komt naar voren uit de bak */
+.tab-fiche.active {
+  background: var(--white);
+  color: var(--text);
+  transform: translateY(0);
+  box-shadow: 0 -3px 8px rgba(0,0,0,0.07);
+  z-index: 2;
+}
+
+.tab-fiche.tab-traject .tab-tab    { background: var(--indigo); }
+.tab-fiche.tab-traject.active      { color: var(--indigo); }
+.tab-fiche.tab-overig .tab-tab     { background: var(--amber); }
+.tab-fiche.tab-overig.active       { color: var(--amber); }
+
+.tab-fiche .tab-count {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.08);
+}
+
+.tab-fiche.tab-traject.active .tab-count { background: var(--indigo); color: #fff; }
+.tab-fiche.tab-overig.active  .tab-count { background: var(--amber); color: #fff; }
+
+/* De bak waarin de fiche-inhoud zit */
+.fiche-body {
+  background: var(--white);
+  border: 1px solid var(--gray-border);
+  border-radius: 0 12px 12px 12px;
+  padding: 24px 22px 22px;
+  box-shadow: var(--shadow);
+}
+
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+.tab-pane > .section:last-child,
+.tab-pane > .section-trajectfiche:last-child { margin-bottom: 0; }
+
+/* ── Afdrukken (enkel tabblad "Agenda & taken") ── */
+.btn-print {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--white);
+  border: 1px solid var(--gray-border);
+  border-radius: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-print:hover {
+  background: var(--gray-light);
+  border-color: var(--gray);
+}
+
+.print-only { display: none; }
+.print-hide-empty { display: none; }
+
+@media print {
+  body * { visibility: hidden; }
+  #pane-overig, #pane-overig * { visibility: visible; }
+
+  #pane-overig {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  #pane-traject { display: none !important; }
+
+  #filterBanner,
+  .filter-buttons,
+  .card-actions,
+  .reaction-form,
+  .note-editor,
+  .section-hint,
+  .section-pin,
+  .section-done-print-exclude,
+  .print-hide-empty {
+    display: none !important;
+  }
+
+  /* Lege reactiezone (geen reacties) volledig weglaten — bespaart label + ruimte */
+  .reactions-area.reactions-empty { display: none !important; }
+
+  /* Leeg notitievak niet printen; de placeholder "+ Voeg notitie toe…" is op papier nutteloos */
+  .note-area:has(.note-display.empty-note),
+  .note-area.note-area-empty { display: none !important; }
+
+  /* Gevulde notitie compact, zonder verplichte minimumhoogte */
+  .note-display { min-height: 0 !important; display: block !important; }
+
+  .print-only {
+    display: block !important;
+    margin-bottom: 14px;
+  }
+
+  .print-only h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    font-weight: 400;
+    color: #000;
+  }
+
+  .print-only .print-date {
+    font-size: 11px;
+    color: #444;
+    margin-top: 2px;
+    text-transform: capitalize;
+  }
+
+  /* Enkel toegewezen namen tonen; lege opvolgingsrij volledig weglaten */
+  .owner-pill:not(.active) { display: none; }
+  .owners-row:not(:has(.owner-pill.active)) { display: none; }
+
+  /* Compactere opmaak om het aantal pagina's te beperken */
+  body { background: white; font-size: 11px; }
+  .section { margin-bottom: 9px; }
+
+  /* Sectiebalken (TYPE) ook op papier duidelijk: kleur behouden, compacter */
+  .section-header {
+    margin-bottom: 5px;
+    padding: 4px 9px;
+    border-radius: 5px;
+    break-after: avoid;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .section-header h2 { font-size: 11px; }
+  .section-count { padding: 1px 6px; font-size: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* Categorie-koppen (THEMA) houden hun streepje + onderlijn, los van de balken */
+  .cat-header {
+    margin: 7px 0 3px 0;
+    padding-bottom: 2px;
+    font-size: 10px;
+    break-after: avoid;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .cat-header::before { width: 10px; height: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  .card { box-shadow: none; border: 1px solid #D1D5DB; page-break-inside: avoid; padding: 4px 8px; margin-bottom: 2px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .card-title { font-size: 11px; line-height: 1.25; }
+  .card-meta { margin-top: 2px; gap: 4px; }
+  .cat-badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cat-badge, .date-badge, .submitted-badge, .link-badge { font-size: 9px; }
+  .card-toelichting { font-size: 9px; padding: 3px 6px; margin-top: 2px; line-height: 1.3; }
+  .owners-row { margin-top: 2px; gap: 4px; }
+  .owners-label { font-size: 9px; }
+  .owner-pill { padding: 1px 7px; font-size: 9px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .note-display { font-size: 9px; padding: 3px 6px; }
+  .reactions-area { margin-top: 3px; padding-top: 3px; }
+  .reactions-label { font-size: 9px; }
+  .reaction-item { font-size: 9px; }
+  @page { margin: 12mm; }
+}
+
+.section {
+  margin-bottom: 36px;
+}
+
+/* Sectiekop = duidelijke gekleurde balk per TYPE (agenda / op te volgen / taken / …).
+   Elke balk krijgt zijn eigen kleur zodat het type in één oogopslag herkenbaar is. */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  border-left: 5px solid var(--gray);
+  background: var(--gray-light);
+}
+
+.section-header h2 {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.section-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-agenda   { background: var(--amber); }
+.dot-pending  { background: #7C3AED; }
+.dot-week     { background: var(--green); }
+.dot-future   { background: var(--blue); }
+.dot-done     { background: var(--done-color); }
+.dot-trajectfiche { background: var(--indigo); }
+
+/* Per-type kleuren voor de sectiebalk (achtergrond + linkerrand + tekst) */
+#section-agenda  > .section-header { background: var(--amber-light); border-left-color: var(--amber); }
+#section-agenda  > .section-header h2 { color: #8a560f; }
+#section-pending > .section-header { background: #F3EDFE; border-left-color: #7C3AED; }
+#section-pending > .section-header h2 { color: #5b21b6; }
+#section-week    > .section-header { background: var(--green-light); border-left-color: var(--green); }
+#section-week    > .section-header h2 { color: #1b5e20; }
+#section-future  > .section-header { background: var(--blue-light); border-left-color: var(--blue); }
+#section-future  > .section-header h2 { color: #0d47a1; }
+.section-done-print-exclude > .section-header { background: var(--done-light); border-left-color: var(--done-color); }
+.section-done-print-exclude > .section-header h2 { color: var(--text-muted); }
+
+.section-count {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.7);
+  color: var(--text);
+  margin-left: auto;
+}
+
+.section-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  padding-left: 4px;
+}
+
+/* ── Vaste sectie: Acties uit trajectfiches directie ── */
+.section-trajectfiche {
+  background: var(--indigo-light);
+  border: 1px solid #D9DBFB;
+  border-radius: var(--radius);
+  padding: 16px 18px 18px;
+}
+
+.section-trajectfiche .section-header {
+  background: #E6E8FF;
+  border-left-color: var(--indigo);
+}
+
+.section-trajectfiche .section-header h2 {
+  color: var(--indigo);
+}
+
+.section-trajectfiche .section-count {
+  background: var(--indigo);
+  color: white;
+}
+
+.section-pin {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--indigo);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-left: 4px;
+}
+
+/* ── Categorie sub-koppen (de THEMA's binnen een sectie, bv. binnen Vergaderpunten).
+   Bewust ánders vormgegeven dan de sectiebalken hierboven: kleiner, met een
+   accentstreepje ervoor, zodat "type" (sectiebalk) en "categorie" (deze kop)
+   nooit met elkaar verward worden. ── */
+.cat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--teal);
+  margin: 18px 0 8px 0;
+  padding-bottom: 5px;
+  border-bottom: 2px solid var(--teal-mid);
+}
+
+.cat-header::before {
+  content: '';
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--teal);
+}
+
+/* ── Trajectfiche thema-koptekst met evalueer-knop ── */
+.cat-header-traj {
+  color: var(--indigo);
+  border-bottom-color: #C7CBF7;
+}
+
+.cat-header-traj::before {
+  background: var(--indigo);
+}
+
+.cat-header-traj .btn-theme-eval {
+  margin-left: auto;
+}
+
+.btn-theme-eval {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  background: none;
+  border: 1px solid #2E7D32;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #2E7D32;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.btn-theme-eval:hover {
+  background: #2E7D32;
+  color: white;
+}
+
+.btn-theme-eval:active {
+  transform: scale(0.96);
+}
+
+/* ── Trajectfiche thema-kaart: alle acties van het thema netjes onder elkaar ── */
+.trajectfiche-theme-card {
+  padding: 4px 14px 6px;
+}
+
+.traject-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--gray-light);
+}
+
+.traject-row:last-child {
+  border-bottom: none;
+}
+
+.traject-row-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.traject-row-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.traject-row.done .traject-row-title {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.traject-row.done {
+  opacity: 0.6;
+}
+
+/* ── Card ── */
+.card {
+  background: var(--white);
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-border);
+  border-left: 4px solid var(--gray-border);
+  box-shadow: var(--shadow);
+  padding: 14px 14px 12px;
+  margin-bottom: 8px;
+  transition: box-shadow 0.15s;
+}
+
+.card:hover { box-shadow: 0 3px 8px rgba(0,0,0,0.09); }
+.card.agenda   { border-left-color: var(--amber); }
+.card.pending  { border-left-color: #7C3AED; }
+.card.week     { border-left-color: var(--green); }
+.card.future   { border-left-color: var(--blue); }
+.card.done     { border-left-color: var(--done-color); opacity: 0.7; }
+.card.trajectfiche, .card.trajectfiche-theme-card { border-left-color: var(--indigo); }
+.card.trajectfiche.done { border-left-color: var(--indigo); opacity: 0.55; }
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.card.done .card-title { color: var(--text-muted); text-decoration: line-through; }
+
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.card-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-icon {
+  padding: 4px 8px;
+  background: none;
+  border: 1px solid var(--gray-border);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.btn-icon:hover {
+  background: var(--gray-light);
+  border-color: var(--gray);
+}
+
+.btn-icon:active {
+  transform: scale(0.95);
+}
+
+.cat-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 4px;
+  background: var(--teal);
+  color: var(--white);
+  letter-spacing: 0.02em;
+}
+
+.date-badge {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.link-badge {
+  font-size: 11px;
+  color: var(--teal);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(31,107,122,0.3);
+  transition: border-color 0.1s;
+}
+
+.link-badge:hover {
+  border-bottom-color: var(--teal);
+}
+
+.submitted-badge {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.owners-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.owners-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.owner-pill {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: var(--gray-light);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.1s;
+  border: 1px solid transparent;
+  font-weight: 500;
+}
+
+.owner-pill:hover {
+  background: var(--teal-light);
+  color: var(--teal);
+}
+
+.owner-pill.active {
+  background: var(--teal);
+  color: white;
+  font-weight: 600;
+}
+
+.note-area {
+  margin-top: 10px;
+}
+
+.note-display {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.5;
+  padding: 8px 10px;
+  background: var(--gray-light);
+  border-radius: 4px;
+  cursor: pointer;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  transition: background 0.1s;
+}
+
+.note-display:hover {
+  background: #E8E8E6;
+}
+
+.note-display.empty-note {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.note-display.empty-note::before {
+  content: '+ Voeg notitie toe…';
+}
+
+.note-editor {
+  display: none;
+  margin-top: 8px;
+}
+
+.note-editor.open {
+  display: block;
+}
+
+.note-editor textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--teal);
+  border-radius: 4px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: var(--text);
+  resize: none;
+  height: 60px;
+  margin-bottom: 6px;
+}
+
+.note-editor textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(31,107,122,0.1);
+}
+
+.note-editor-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-note-save,
+.btn-note-cancel {
+  flex: 1;
+  padding: 6px;
+  border: none;
+  border-radius: 4px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.1s;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.btn-note-save {
+  background: var(--teal);
+  color: white;
+}
+
+.btn-note-save:hover {
+  background: #185f6d;
+}
+
+.btn-note-cancel {
+  background: var(--gray-light);
+  color: var(--text-muted);
+}
+
+.btn-note-cancel:hover {
+  background: #E0E0E0;
+}
+
+.hidden-by-filter {
+  display: none;
+}
+
+.empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+#filterBanner {
+  position: fixed;
+  top: 60px;
+  right: 32px;
+  background: var(--amber);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+#filterBanner.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.filter-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--gray-border);
+  background: var(--white);
+  color: var(--text);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.filter-btn:hover {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+.filter-btn.active {
+  background: var(--teal);
+  color: white;
+  border-color: var(--teal);
+}
+
+/* ── Toelichting ── */
+.card-toelichting {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--gray-light);
+  border-radius: 4px;
+  border-left: 3px solid var(--teal-mid);
+  white-space: pre-wrap;
+}
+
+/* ── Reacties ── */
+.reactions-area {
+  margin-top: 10px;
+  border-top: 1px solid var(--gray-border);
+  padding-top: 8px;
+}
+
+.reactions-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+.reaction-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 5px;
+}
+
+.reaction-author {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--teal);
+  white-space: nowrap;
+  padding-top: 1px;
+}
+
+.reaction-text {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.45;
+  flex: 1;
+}
+
+.reaction-time {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  padding-top: 2px;
+}
+
+.reaction-form {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.reaction-form select {
+  padding: 5px 8px;
+  border: 1px solid var(--gray-border);
+  border-radius: 4px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--white);
+  outline: none;
+  flex-shrink: 0;
+}
+
+.reaction-form select:focus {
+  border-color: var(--teal);
+}
+
+.reaction-form input[type="text"] {
+  flex: 1;
+  min-width: 120px;
+  padding: 5px 8px;
+  border: 1px solid var(--gray-border);
+  border-radius: 4px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--white);
+  outline: none;
+}
+
+.reaction-form input[type="text"]:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 2px rgba(31,107,122,0.1);
+}
+
+.btn-reaction-send {
+  padding: 5px 10px;
+  background: var(--teal);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.1s;
+  flex-shrink: 0;
+}
+
+.btn-reaction-send:hover { background: #185f6d; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- LOGIN OVERLAY - Dit is het enige dat zichtbaar is wanneer je laadt -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<div id="loginOverlay">
+  <div class="login-box">
+    <h1>Directieoverleg</h1>
+    <p class="login-subtitle">Geef het wachtwoord in om door te gaan</p>
+    
+    <div id="loginError"></div>
+    
+    <div class="login-field">
+      <label for="passwordInput">Wachtwoord</label>
+      <input type="password" id="passwordInput" placeholder="Voer wachtwoord in…" autocomplete="off">
+    </div>
+    
+    <button id="loginBtn">Inloggen</button>
+    <div class="login-loading" id="loginLoading">Controleren…</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- HOOFD APPLICATIE - VERBORGEN TOTDAT JE INGELOGD BENT -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<div id="appContainer">
+  <header>
+    <h1>Directieoverleg</h1>
+    <span class="header-date" id="headerDate"></span>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>Voeg punt toe</h2>
+      <div class="field">
+        <label for="submittedBy">Ingediend door</label>
+        <select id="submittedBy">
+          <option value="">Selecteer naam…</option>
+          <option value="An">An</option>
+          <option value="Ann">Ann</option>
+          <option value="Mieke">Mieke</option>
+          <option value="Lies">Lies</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="type">Type</label>
+        <select id="type" onchange="updateCategoryField()">
+          <option value="task">Taak</option>
+          <option value="agenda">Agendapunt</option>
+          <option value="trajectfiche">Actie trajectfiche directie</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="category" id="categoryLabel">Categorie / Thema</label>
+        <input type="text" id="category" list="categoryOptions" placeholder="Bv. Organisatie, Leerlingen…" autocomplete="off">
+        <datalist id="categoryOptions">
+          <option value="Organisatie">
+          <option value="Personeel">
+          <option value="Leerlingen">
+          <option value="Te delen uit overleg">
+          <option value="Andere">
+        </datalist>
+      </div>
+
+      <div class="field">
+        <label for="title">Titel *</label>
+        <input type="text" id="title" placeholder="Wat is het punt?">
+      </div>
+
+      <div class="field">
+        <label for="date">Datum</label>
+        <input type="date" id="date">
+      </div>
+
+      <div class="field">
+        <label for="toelichting">Toelichting</label>
+        <textarea id="toelichting" placeholder="Geef eventueel meer uitleg bij dit punt…" style="height:72px;resize:none;"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="link">Link naar document</label>
+        <input type="text" id="link" placeholder="https://...">
+      </div>
+
+      <button class="btn-add" onclick="addItem()">Toevoegen</button>
+    </aside>
+
+    <main class="main">
+
+      <!-- ── Fichebak: twee fiches om tussen te wisselen ── -->
+      <div class="tab-bar" role="tablist">
+        <div class="tab-bar-tabs">
+          <button class="tab-fiche tab-traject active" id="tab-traject" role="tab" aria-selected="true" onclick="setTab('traject')">
+            <span class="tab-tab"></span>
+            <span class="tab-label">Trajectfiches directie<span class="tab-count" id="tabcount-traject">0</span></span>
+            <span class="tab-sub">Acties uit lopende trajectfiches</span>
+          </button>
+          <button class="tab-fiche tab-overig" id="tab-overig" role="tab" aria-selected="false" onclick="setTab('overig')">
+            <span class="tab-tab"></span>
+            <span class="tab-label">Agenda &amp; taken<span class="tab-count" id="tabcount-overig">0</span></span>
+            <span class="tab-sub">Vergaderpunten, op te volgen, taken &amp; afgewerkt</span>
+          </button>
+        </div>
+        <button class="btn-print" onclick="printAgenda()" title="Druk de agenda en taken af (tabblad 'Agenda &amp; taken')">🖨️ Agenda &amp; taken afdrukken</button>
+      </div>
+
+      <!-- ── Fiche 1: trajectfiches ── -->
+      <div class="fiche-body tab-pane active" id="pane-traject" role="tabpanel">
+        <div class="section section-trajectfiche">
+          <div class="section-header">
+            <span class="section-dot dot-trajectfiche"></span>
+            <h2>Acties uit trajectfiches directie</h2>
+            <span class="section-count" id="count-trajectfiche">0</span>
+            <span class="section-pin">📌 heel schooljaar zichtbaar</span>
+          </div>
+          <div id="trajectfiche"></div>
+          <p class="section-hint">Acties uit lopende trajectfiches (bv. examentraject), gegroepeerd per thema. Ze blijven hier staan — ook als ze als afgewerkt worden aangevinkt — tot het volledige thema geëvalueerd wordt via de knop "Thema geëvalueerd" bovenaan elk thema. Dan verdwijnen alle acties van dat thema in één keer definitief.</p>
+        </div>
+      </div>
+
+      <!-- ── Fiche 2: agenda & taken ── -->
+      <div class="fiche-body tab-pane" id="pane-overig" role="tabpanel">
+        <div class="print-only print-header">
+          <h1>Directieoverleg</h1>
+          <div class="print-date" id="printDate"></div>
+        </div>
+
+        <div id="filterBanner">
+          <span id="filterBannerText"></span>
+        </div>
+
+        <div class="filter-buttons">
+          <button class="filter-btn active" id="filter-all" onclick="setFilter(null)">Alle</button>
+          <button class="filter-btn" onclick="setFilter('An')">An</button>
+          <button class="filter-btn" onclick="setFilter('Ann')">Ann</button>
+          <button class="filter-btn" onclick="setFilter('Mieke')">Mieke</button>
+          <button class="filter-btn" onclick="setFilter('Lies')">Lies</button>
+        </div>
+
+        <div class="section" id="section-agenda">
+          <div class="section-header">
+            <span class="section-dot dot-agenda"></span>
+            <h2>Vergaderpunten</h2>
+            <span class="section-count" id="count-agenda">0</span>
+          </div>
+          <div id="agenda"></div>
+          <p class="section-hint">Wijs tijdens het overleg de opvolging toe via de naamknoppen onderaan elke kaart.</p>
+        </div>
+
+        <div class="section" id="section-pending">
+          <div class="section-header">
+            <span class="section-dot dot-pending"></span>
+            <h2>Op te volgen</h2>
+            <span class="section-count" id="count-pending">0</span>
+          </div>
+          <div id="pending"></div>
+          <p class="section-hint">Agendapunten die nog verder opgevolgd moeten worden.</p>
+        </div>
+
+        <div class="section" id="section-week">
+          <div class="section-header">
+            <span class="section-dot dot-week"></span>
+            <h2>Taken – deze week</h2>
+            <span class="section-count" id="count-week">0</span>
+          </div>
+          <div id="week"></div>
+        </div>
+
+        <div class="section" id="section-future">
+          <div class="section-header">
+            <span class="section-dot dot-future"></span>
+            <h2>Taken – binnenkort</h2>
+            <span class="section-count" id="count-future">0</span>
+          </div>
+          <div id="future"></div>
+        </div>
+
+        <div class="section section-done-print-exclude">
+          <div class="section-header">
+            <span class="section-dot dot-done"></span>
+            <h2>Afgewerkt</h2>
+            <span class="section-count" id="count-done">0</span>
+          </div>
+          <div id="done"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// FICHEBAK – wisselen tussen tabbladen
+// ════════════════════════════════════════════════════════════════
+function setTab(which){
+  var traject = which === 'traject';
+  document.getElementById('pane-traject').classList.toggle('active', traject);
+  document.getElementById('pane-overig').classList.toggle('active', !traject);
+  var tT = document.getElementById('tab-traject');
+  var tO = document.getElementById('tab-overig');
+  tT.classList.toggle('active', traject);
+  tO.classList.toggle('active', !traject);
+  tT.setAttribute('aria-selected', traject ? 'true' : 'false');
+  tO.setAttribute('aria-selected', traject ? 'false' : 'true');
+}
+
+// ════════════════════════════════════════════════════════════════
+// AFDRUKKEN – enkel het tabblad "Agenda & taken"
+// ════════════════════════════════════════════════════════════════
+function printAgenda(){
+  var d = new Date();
+  var dateStr = d.toLocaleDateString('nl-BE', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  document.getElementById('printDate').textContent = dateStr;
+
+  function isContainerEmpty(containerId){
+    var el = document.getElementById(containerId);
+    if(!el) return true;
+    var kids = el.children;
+    return kids.length === 0 || (kids.length === 1 && kids[0].classList.contains('empty'));
+  }
+
+  // Lege secties (geen items) worden niet meegeprint, om papier/pagina's te besparen.
+  [
+    {section: 'section-agenda',  container: 'agenda'},
+    {section: 'section-pending', container: 'pending'},
+    {section: 'section-week',    container: 'week'},
+    {section: 'section-future',  container: 'future'}
+  ].forEach(function(s){
+    var sec = document.getElementById(s.section);
+    if(sec) sec.classList.toggle('print-hide-empty', isContainerEmpty(s.container));
+  });
+
+  // Fallback (voor browsers zonder :has()): markeer notitie-zones met een
+  // lege notitie zodat ze bij het printen worden weggelaten.
+  document.querySelectorAll('.note-area').forEach(function(area){
+    var disp = area.querySelector('.note-display');
+    area.classList.toggle('note-area-empty', !!(disp && disp.classList.contains('empty-note')));
+  });
+
+  window.print();
+}
+
+// ════════════════════════════════════════════════════════════════ 
+// FIREBASE INITIALISATIE
+// ════════════════════════════════════════════════════════════════
+
+// Wacht tot Firebase geladen is
+function initFirebase() {
+  if (typeof firebase === 'undefined') {
+    // Firebase nog niet geladen, probeer het later
+    setTimeout(initFirebase, 100);
+    return;
+  }
+
+  var firebaseConfig = {
+    apiKey: "AIzaSyDkHdgG9inSAHpIN8dAcWz24RHV1jq5H08",
+    authDomain: "directieoverleg.firebaseapp.com",
+    projectId: "directieoverleg"
+  };
+  
+  try {
+    firebase.initializeApp(firebaseConfig);
+  } catch (error) {
+    // Firebase al geïnitialiseerd, geen probleem
+  }
+  
+  window.db = firebase.firestore();
+  window.col = window.db.collection("agenda");
+  
+  // Meld anoniem aan, start daarna pas de authenticatie check
+  firebase.auth().signInAnonymously()
+    .then(function() {
+      initializeAuth();
+    })
+    .catch(function(error) {
+      console.error("Anonieme aanmelding mislukt:", error);
+      showLoginError("Fout bij verbinden. Probeer later opnieuw.");
+    });
+}
+
+initFirebase();
+
+// ════════════════════════════════════════════════════════════════ 
+// AUTHENTICATIE LOGICA
+// ════════════════════════════════════════════════════════════════
+// Het wachtwoord wordt opgehaald uit een speciale "config" document in Firebase
+var authInitialized = false;
+
+async function initializeAuth() {
+  try {
+    // Haal het wachtwoord op uit de "config" collectie, document "settings"
+    var configDoc = await window.db.collection("config").doc("settings").get();
+    
+    if (!configDoc.exists) {
+      console.error("Config document bestaat niet in Firebase");
+      showLoginError("Fout: Kan wachtwoord niet laden. Neem contact op met ICT.");
+      return;
+    }
+    
+    window.correctPassword = configDoc.data().appPassword;
+    authInitialized = true;
+    
+    // Eventlisteners voor login
+    document.getElementById("passwordInput").addEventListener("keypress", function(e) {
+      if (e.key === "Enter") handleLogin();
+    });
+    
+    document.getElementById("loginBtn").addEventListener("click", handleLogin);
+    
+  } catch (error) {
+    console.error("Fout bij laden wachtwoord:", error);
+    showLoginError("Fout bij laden beveiligingsinstellingen. Probeer later opnieuw.");
+  }
+}
+
+function showLoginError(message) {
+  var errorEl = document.getElementById("loginError");
+  errorEl.textContent = message;
+  errorEl.classList.add("show");
+}
+
+function hideLoginError() {
+  var errorEl = document.getElementById("loginError");
+  errorEl.classList.remove("show");
+}
+
+function handleLogin() {
+  if (!authInitialized) {
+    showLoginError("Beveiliging laadt nog. Wacht even…");
+    return;
+  }
+  
+  hideLoginError();
+  
+  var input = document.getElementById("passwordInput");
+  var password = input.value.trim();
+  
+  if (!password) {
+    showLoginError("Voer het wachtwoord in");
+    return;
+  }
+  
+  // Show loading state
+  var btn = document.getElementById("loginBtn");
+  var loading = document.getElementById("loginLoading");
+  btn.disabled = true;
+  loading.classList.add("show");
+  
+  // Simulate a small delay to check password
+  setTimeout(function() {
+    btn.disabled = false;
+    loading.classList.remove("show");
+    
+    if (password === window.correctPassword) {
+      // Correct password!
+      unlockApp();
+    } else {
+      showLoginError("Wachtwoord is onjuist. Probeer opnieuw.");
+      input.value = "";
+      input.focus();
+    }
+  }, 400);
+}
+
+function unlockApp() {
+  // Hide login overlay
+  var overlay = document.getElementById("loginOverlay");
+  overlay.classList.add("hidden");
+  
+  // Show app
+  var app = document.getElementById("appContainer");
+  app.classList.add("authenticated");
+  
+  // Initialize the main app
+  setTimeout(initializeApp, 300);
+}
+
+// ════════════════════════════════════════════════════════════════ 
+// HOOFD APP LOGICA (Originele code)
+// ════════════════════════════════════════════════════════════════
+function initializeApp() {
+  // Datum in header
+  var d = new Date();
+  document.getElementById('headerDate').textContent =
+    d.toLocaleDateString('nl-BE', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+  var ALL_OWNERS = ["An","Ann","Mieke","Lies"];
+  var activeFilter = null;
+
+  // Bij een agendapunt/taak: invulveld met keuzelijst (vaste categorieën).
+  // Bij een actie trajectfiche directie: vrij invulveld zonder suggesties,
+  // want de thema's van de trajecten wijzigen elk schooljaar (bv. "Examen").
+  function updateCategoryField(){
+    var typeVal = document.getElementById("type").value;
+    var input   = document.getElementById("category");
+    var label   = document.getElementById("categoryLabel");
+    if(typeVal === "trajectfiche"){
+      input.removeAttribute("list");
+      input.placeholder = "Vul hier zelf het thema van het traject in…";
+      label.textContent = "Thema van het traject";
+    } else {
+      input.setAttribute("list", "categoryOptions");
+      input.placeholder = "Bv. Organisatie, Leerlingen…";
+      label.textContent = "Categorie / Thema";
+    }
+  }
+  updateCategoryField();
+
+  function setFilter(name){
+    activeFilter = name;
+    document.querySelectorAll('.filter-btn').forEach(function(btn){
+      btn.classList.remove('active');
+      if(btn.textContent === name) btn.classList.add('active');
+      if(!name && btn.id === 'filter-all') btn.classList.add('active');
+    });
+    var banner = document.getElementById('filterBanner');
+    if(name){
+      banner.classList.add('visible');
+      document.getElementById('filterBannerText').textContent = 'Gefilterd op: ' + name;
+    } else {
+      banner.classList.remove('visible');
+    }
+    applyFilter();
+  }
+
+  function applyFilter(){
+    document.querySelectorAll('.card').forEach(function(card){
+      if(!activeFilter){ card.classList.remove('hidden-by-filter'); return; }
+      var fu = card.getAttribute('data-followup') || '';
+      var names = fu ? fu.split(',') : [];
+      if(names.indexOf(activeFilter) >= 0) card.classList.remove('hidden-by-filter');
+      else card.classList.add('hidden-by-filter');
+    });
+  }
+
+  function openNoteById(dispEl){
+    var id = dispEl.getAttribute('data-note-id');
+    var current = dispEl.innerText || '';
+    var editor = document.getElementById('note-edit-'+id);
+    var ta = document.getElementById('note-ta-'+id);
+    dispEl.style.display = 'none';
+    editor.classList.add('open');
+    ta.value = current;
+    ta.focus();
+  }
+
+  function openNote(id, current){
+    var disp = document.getElementById('note-disp-'+id);
+    var editor = document.getElementById('note-edit-'+id);
+    var ta = document.getElementById('note-ta-'+id);
+    disp.style.display = 'none';
+    editor.classList.add('open');
+    ta.value = current || '';
+    ta.focus();
+  }
+
+  function cancelNote(id, current){
+    var disp = document.getElementById('note-disp-'+id);
+    var editor = document.getElementById('note-edit-'+id);
+    disp.style.display = '';
+    editor.classList.remove('open');
+  }
+
+  function saveNote(id){
+    var ta = document.getElementById('note-ta-'+id);
+    var val = ta.value.trim();
+    window.col.doc(id).update({note: val}).then(function(){
+      cancelNote(id, val);
+    });
+  }
+
+  function addItem(){
+    var titel = document.getElementById("title").value.trim();
+    if(!titel){ alert("Geef een titel in"); return; }
+
+    var submittedBy    = document.getElementById("submittedBy").value;
+    var typeVal        = document.getElementById("type").value;
+    var categoryVal    = document.getElementById("category").value;
+    var dateVal        = document.getElementById("date").value;
+    var linkVal        = document.getElementById("link").value;
+    var toelichtingVal = document.getElementById("toelichting").value.trim();
+
+    window.col.add({
+      title:       titel,
+      type:        typeVal,
+      category:    categoryVal,
+      date:        dateVal,
+      submittedBy: submittedBy,
+      followUp:    [],
+      link:        linkVal,
+      toelichting: toelichtingVal,
+      reactions:   [],
+      status:      "new",
+      created:     Date.now(),
+      doneDate:    null
+    });
+
+    document.getElementById("title").value = "";
+    document.getElementById("link").value = "";
+    document.getElementById("date").value = "";
+    document.getElementById("toelichting").value = "";
+    document.getElementById("submittedBy").value = "";
+    document.getElementById("category").value = "";
+  }
+
+  function toggleFollowUp(id, name){
+    window.col.doc(id).get().then(function(snap){
+      var list = (snap.data().followUp || []).slice();
+      var idx = list.indexOf(name);
+      if(idx >= 0) list.splice(idx, 1);
+      else list.push(name);
+      window.col.doc(id).update({followUp: list});
+    });
+  }
+
+  function setDone(id){
+    window.col.doc(id).update({status:"done", doneDate: new Date()});
+  }
+
+  function setPending(id){
+    window.col.doc(id).update({status:"pending"});
+  }
+
+  function removeItem(id){
+    if(confirm("Dit punt verwijderen?")) window.col.doc(id).delete();
+  }
+
+  // Houdt per thema bij welke document-id's er momenteel in de trajectfiche-sectie
+  // staan, zodat een volledig thema in één keer geëvalueerd (verwijderd) kan worden.
+  var trajThemeIds = {};
+  // Houdt per thema de kant-en-klare rij-HTML bij van elke actie, zodat alle acties
+  // van een thema samen op één kaart getoond kunnen worden, netjes onder elkaar.
+  var trajThemeRows = {};
+
+  function evaluateTheme(theme){
+    var ids = (trajThemeIds[theme] || []).slice();
+    if(!ids.length){ alert("Geen acties gevonden voor dit thema."); return; }
+    if(!confirm("Thema '"+theme+"' is volledig geëvalueerd. Alle "+ids.length+" actie(s) van dit thema worden definitief verwijderd. Doorgaan?")) return;
+    var batch = window.db.batch();
+    ids.forEach(function(id){ batch.delete(window.col.doc(id)); });
+    batch.commit();
+  }
+
+  function addReaction(id){
+    var author = document.getElementById("react-author-"+id).value;
+    var text   = document.getElementById("react-text-"+id).value.trim();
+    if(!author){ alert("Kies eerst je naam"); return; }
+    if(!text)  { alert("Typ een reactie"); return; }
+
+    window.col.doc(id).get().then(function(snap){
+      var list = (snap.data().reactions || []).slice();
+      list.push({ author: author, text: text, ts: Date.now() });
+      window.col.doc(id).update({ reactions: list }).then(function(){
+        document.getElementById("react-text-"+id).value = "";
+      });
+    });
+  }
+
+  window.col.onSnapshot(function(snapshot){
+    // Scrollpositie ONTHOUDEN vóór we de lijsten leegmaken. (Na het leegmaken is de
+    // pagina even kort en zou de browser de scrollpositie naar boven terugzetten.)
+    var savedScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+    var trajectfietsEl = document.getElementById("trajectfiche");
+    var agendaEl   = document.getElementById("agenda");
+    var pendingEl  = document.getElementById("pending");
+    var weekEl     = document.getElementById("week");
+    var futureEl   = document.getElementById("future");
+    var doneEl     = document.getElementById("done");
+
+    trajectfietsEl.innerHTML = "";
+    agendaEl.innerHTML  = "";
+    pendingEl.innerHTML = "";
+    weekEl.innerHTML    = "";
+    futureEl.innerHTML  = "";
+    doneEl.innerHTML    = "";
+
+    trajThemeIds = {};
+    trajThemeRows = {};
+
+    var counts = {trajectfiche:0, agenda:0, pending:0, week:0, future:0, done:0};
+    var now = new Date();
+
+    // Vaste, voorspelbare volgorde: datum → aanmaakmoment → id.
+    // (Zonder de extra sleutels hing de volgorde bij gelijke datum af van Firebase.)
+    var docs = snapshot.docs.sort(function(a,b){
+      var da = a.data(), db = b.data();
+      var d1 = da.date || "";
+      var d2 = db.date || "";
+      var c = d1.localeCompare(d2);
+      if(c !== 0) return c;
+      c = (da.created || 0) - (db.created || 0);
+      if(c !== 0) return c;
+      return a.id < b.id ? -1 : (a.id > b.id ? 1 : 0);
+    });
+
+    var agendaByCat = {};
+
+    docs.forEach(function(docSnap){
+      var i = docSnap.data();
+      var id = docSnap.id;
+
+      if(i.type !== "trajectfiche" && i.doneDate && (now - new Date(i.doneDate)) > 1209600000) return;
+
+      var followUp = i.followUp || [];
+
+      // ── Trajectfiche-acties: geen reacties/notities, alle acties van een
+      // thema worden verzameld om straks samen op één kaart te tonen. ──
+      if(i.type === "trajectfiche"){
+        var theme = i.category || "Andere";
+
+        var rowDateHtml = i.date
+          ? "<span class='date-badge'>📅 "+i.date+"</span>"
+          : "";
+        var rowSubmittedHtml = i.submittedBy
+          ? "<span class='submitted-badge'>✏️ "+i.submittedBy+"</span>"
+          : "";
+        var rowLinkHtml = i.link
+          ? "<a class='link-badge' href='"+i.link+"' target='_blank'>🔗 Document</a>"
+          : "";
+        var rowMetaHtml = (rowDateHtml || rowSubmittedHtml || rowLinkHtml)
+          ? "<div class='card-meta'>"+rowDateHtml+rowSubmittedHtml+rowLinkHtml+"</div>"
+          : "";
+
+        var rowToelichtingHtml = i.toelichting
+          ? "<div class='card-toelichting'>"+i.toelichting.replace(/&/g,"&amp;").replace(/</g,"&lt;")+"</div>"
+          : "";
+
+        var rowTitle = (i.title || "").replace(/&/g,"&amp;").replace(/</g,"&lt;");
+
+        var rowHtml =
+          "<div class='traject-row"+(i.status === "done" ? " done" : "")+"'>" +
+            "<button class='btn-icon btn-done' onclick=\"setDone('"+id+"')\" title='Markeer als afgewerkt'>✔</button>" +
+            "<div class='traject-row-body'>" +
+              "<div class='traject-row-title'>"+rowTitle+"</div>" +
+              rowMetaHtml +
+              rowToelichtingHtml +
+            "</div>" +
+            "<button class='btn-icon btn-delete' onclick=\"removeItem('"+id+"')\" title='Verwijderen'>✕</button>" +
+          "</div>";
+
+        (trajThemeRows[theme] = trajThemeRows[theme] || []).push(rowHtml);
+        (trajThemeIds[theme]  = trajThemeIds[theme]  || []).push(id);
+        counts.trajectfiche++;
+        return;
+      }
+
+      var catHtml = i.category
+        ? "<span class='cat-badge'>"+i.category+"</span>"
+        : "";
+
+      var dateHtml = i.date
+        ? "<span class='date-badge'>📅 "+i.date+"</span>"
+        : "";
+
+      var submittedHtml = i.submittedBy
+        ? "<span class='submitted-badge'>✏️ "+i.submittedBy+"</span>"
+        : "";
+
+      var linkHtml = i.link
+        ? "<a class='link-badge' href='"+i.link+"' target='_blank'>🔗 Document</a>"
+        : "";
+
+      // Opvolging pills – klikbaar tijdens overleg
+      var followUpPills = "<div class='owners-row'><span class='owners-label'>Opvolging:</span>";
+      ALL_OWNERS.forEach(function(name){
+        var active = followUp.indexOf(name) >= 0 ? " active" : "";
+        followUpPills += "<span class='owner-pill"+active+"' onclick=\"toggleFollowUp('"+id+"','"+name+"')\">" + name + "</span>";
+      });
+      followUpPills += "</div>";
+
+      // Notitie — sla de tekst op als data-attribuut om escape-problemen te vermijden
+      var noteVal = i.note || '';
+      var noteHtml =
+        "<div class='note-area' id='note-area-"+id+"'>" +
+          "<div class='note-display"+(noteVal ? "" : " empty-note")+"' id='note-disp-"+id+"' data-note-id='"+id+"' onclick=\"openNoteById(this)\">"+
+            (noteVal ? noteVal.replace(/&/g,"&amp;").replace(/</g,"&lt;") : "") +
+          "</div>" +
+          "<div class='note-editor' id='note-edit-"+id+"'>" +
+            "<textarea id='note-ta-"+id+"' placeholder='Schrijf hier een reminder of notitie…'></textarea>" +
+            "<div class='note-editor-actions'>" +
+              "<button class='btn-note-save' onclick=\"saveNote('"+id+"')\">Opslaan</button>" +
+              "<button class='btn-note-cancel' onclick=\"cancelNote('"+id+"')\">Annuleren</button>" +
+            "</div>" +
+          "</div>" +
+        "</div>";
+
+      var doneBtn    = "<button class='btn-icon btn-done'    onclick=\"setDone('"+id+"')\"    title='Markeer als afgewerkt'>✔</button>";
+      var pendingBtn = "<button class='btn-icon btn-pending' onclick=\"setPending('"+id+"')\" title='Zet op te volgen'>⏳</button>";
+      var deleteBtn  = "<button class='btn-icon btn-delete'  onclick=\"removeItem('"+id+"')\"  title='Verwijderen'>✕</button>";
+
+      var cardActionsHtml = doneBtn + pendingBtn + deleteBtn;
+
+      // Toelichting
+      var toelichtingHtml = i.toelichting
+        ? "<div class='card-toelichting'>"+i.toelichting.replace(/&/g,"&amp;").replace(/</g,"&lt;")+"</div>"
+        : "";
+
+      // Reacties
+      var reactions = i.reactions || [];
+      var reactionsListHtml = "";
+      reactions.forEach(function(r){
+        var time = r.ts ? new Date(r.ts).toLocaleString('nl-BE',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+        reactionsListHtml +=
+          "<div class='reaction-item'>" +
+            "<span class='reaction-author'>"+r.author+"</span>" +
+            "<span class='reaction-text'>"+r.text.replace(/&/g,"&amp;").replace(/</g,"&lt;")+"</span>" +
+            "<span class='reaction-time'>"+time+"</span>" +
+          "</div>";
+      });
+      var reactionsHtml =
+        "<div class='reactions-area"+(reactions.length ? "" : " reactions-empty")+"'>" +
+          "<div class='reactions-label'>💬 Reacties</div>" +
+          reactionsListHtml +
+          "<div class='reaction-form'>" +
+            "<select id='react-author-"+id+"'>" +
+              "<option value=''>Naam…</option>" +
+              ALL_OWNERS.map(function(n){ return "<option>"+n+"</option>"; }).join("") +
+            "</select>" +
+            "<input type='text' id='react-text-"+id+"' placeholder='Schrijf een reactie…'>" +
+            "<button class='btn-reaction-send' onclick=\"addReaction('"+id+"')\">Stuur</button>" +
+          "</div>" +
+        "</div>";
+
+      var el = document.createElement("div");
+      el.className = "card";
+      el.setAttribute('data-followup', followUp.join(','));
+      el.innerHTML =
+        "<div class='card-top'>" +
+          "<div class='card-title'>"+i.title+"</div>" +
+          "<div class='card-actions'>"+cardActionsHtml+"</div>" +
+        "</div>" +
+        "<div class='card-meta'>"+catHtml+dateHtml+submittedHtml+linkHtml+"</div>" +
+        toelichtingHtml +
+        followUpPills +
+        reactionsHtml +
+        noteHtml;
+
+      if(i.status === "done"){
+        el.classList.add("done");
+        doneEl.appendChild(el);
+        counts.done++;
+      } else if(i.status === "pending"){
+        el.classList.add("pending");
+        pendingEl.appendChild(el);
+        counts.pending++;
+      } else if(i.type === "agenda"){
+        var cat = i.category || "Andere";
+        el.classList.add("agenda");
+        (agendaByCat[cat] = agendaByCat[cat] || []).push(el);
+        counts.agenda++;
+      } else {
+        var diff = i.date ? (new Date(i.date) - now)/(1000*60*60*24) : 9999;
+        if(!i.date || diff <= 7){
+          el.classList.add("week");
+          weekEl.appendChild(el);
+          counts.week++;
+        } else if(diff <= 31){
+          el.classList.add("future");
+          futureEl.appendChild(el);
+          counts.future++;
+        }
+        // taken verder dan 1 maand in de toekomst worden NIET getoond
+      }
+    });
+
+    // ── Agenda: categorieën in een VASTE volgorde (zoals in de keuzelijst),
+    // zodat het wegklikken van een punt nooit andere categorieën doet verspringen. ──
+    var CAT_ORDER = ["Organisatie","Personeel","Leerlingen","Te delen uit overleg","Andere"];
+    function catRank(c){ var k = CAT_ORDER.indexOf(c); return k >= 0 ? k : CAT_ORDER.length; }
+    Object.keys(agendaByCat).sort(function(a,b){
+      var d = catRank(a) - catRank(b);
+      return d !== 0 ? d : a.localeCompare(b,'nl');
+    }).forEach(function(cat){
+      var h = document.createElement("div");
+      h.className = "cat-header";
+      h.textContent = cat;
+      agendaEl.appendChild(h);
+      var div = document.createElement("div");
+      agendaByCat[cat].forEach(function(card){ div.appendChild(card); });
+      agendaEl.appendChild(div);
+    });
+
+    // ── Trajectfiche: per thema één koptekst + één kaart met alle acties netjes onder elkaar ──
+    Object.keys(trajThemeRows).sort(function(a,b){ return a.localeCompare(b,'nl'); }).forEach(function(theme){
+      var th = document.createElement("div");
+      th.className = "cat-header cat-header-traj";
+      var themeLabel = document.createElement("span");
+      themeLabel.textContent = theme;
+      var themeBtn = document.createElement("button");
+      themeBtn.className = "btn-theme-eval";
+      themeBtn.title = "Volledig thema geëvalueerd — alle acties van dit thema verdwijnen definitief";
+      themeBtn.textContent = "✅ Thema geëvalueerd";
+      themeBtn.onclick = function(t){ return function(){ evaluateTheme(t); }; }(theme);
+      th.appendChild(themeLabel);
+      th.appendChild(themeBtn);
+      trajectfietsEl.appendChild(th);
+
+      var themeCard = document.createElement("div");
+      themeCard.className = "card trajectfiche-theme-card";
+      themeCard.innerHTML = trajThemeRows[theme].join("");
+      trajectfietsEl.appendChild(themeCard);
+    });
+
+    // Counts
+    document.getElementById("count-trajectfiche").textContent = counts.trajectfiche;
+    document.getElementById("count-agenda").textContent   = counts.agenda;
+    document.getElementById("count-pending").textContent  = counts.pending;
+    document.getElementById("count-week").textContent     = counts.week;
+    document.getElementById("count-future").textContent   = counts.future;
+    document.getElementById("count-done").textContent     = counts.done;
+
+    // Tab-tellers (fichebak)
+    document.getElementById("tabcount-traject").textContent = counts.trajectfiche;
+    document.getElementById("tabcount-overig").textContent  =
+      counts.agenda + counts.pending + counts.week + counts.future + counts.done;
+
+    // Empty states
+    if(!trajectfietsEl.children.length) trajectfietsEl.innerHTML = "<p class='empty'>Geen acties uit trajectfiches</p>";
+    if(!agendaEl.children.length)  agendaEl.innerHTML  = "<p class='empty'>Geen vergaderpunten</p>";
+    if(!pendingEl.children.length) pendingEl.innerHTML = "<p class='empty'>Geen punten in opvolging</p>";
+    if(!weekEl.children.length)    weekEl.innerHTML    = "<p class='empty'>Geen taken deze week</p>";
+    if(!futureEl.children.length)  futureEl.innerHTML  = "<p class='empty'>Geen geplande taken (komende maand)</p>";
+    if(!doneEl.children.length)    doneEl.innerHTML    = "<p class='empty'>Nog niets afgewerkt</p>";
+
+    // Hertoepassen filter na elke Firebase-update
+    applyFilter();
+
+    // Scrollpositie herstellen: je blijft waar je was in de agenda
+    window.scrollTo(0, savedScrollY);
+    // Voor de zekerheid nog eens na het tekenen (bv. bij trage lettertype-/layoutupdates)
+    requestAnimationFrame(function(){ window.scrollTo(0, savedScrollY); });
+  });
+
+  // Expose functions to window for onclick handlers
+  window.openNoteById = openNoteById;
+  window.openNote = openNote;
+  window.cancelNote = cancelNote;
+  window.saveNote = saveNote;
+  window.addItem = addItem;
+  window.updateCategoryField = updateCategoryField;
+  window.toggleFollowUp = toggleFollowUp;
+  window.setDone = setDone;
+  window.setPending = setPending;
+  window.removeItem = removeItem;
+  window.evaluateTheme = evaluateTheme;
+  window.setFilter = setFilter;
+  window.addReaction = addReaction;
+}
+
+// Authenticatie wordt gestart vanuit initFirebase() zodra Firebase geladen en
+// window.db beschikbaar is (zie hierboven) — geen aparte aanroep hier nodig.
+</script>
+</body>
+</html>
